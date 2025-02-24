@@ -63,13 +63,16 @@ export KBUILD_BUILD_TIMESTAMP="$(date -Ru${SOURCE_DATE_EPOCH:+d @$SOURCE_DATE_EP
 
 # Add _menuconfig variable
 _menuconfig=0  # Set to 1 to enable menuconfig
+_make_module=0 # Set to 1 to enable module only build after initial build
 
 prepare() {
-  cd $_srcname
+    # Always copy the source, in case of full or partial build.
+    cp ../via_i2c.c $_srcname/drivers/gpu/drm/via/
+    cd $_srcname
 
-  echo "Setting version..."
-  echo "-$pkgrel" > localversion.10-pkgrel
-  echo "${pkgbase#linux}" > localversion.20-pkgname
+    echo "Setting version..."
+    echo "-$pkgrel" > localversion.10-pkgrel
+    echo "${pkgbase#linux}" > localversion.20-pkgname
 
   local src
   for src in "${source[@]}"; do
@@ -97,144 +100,158 @@ prepare() {
 }
 
 build() {
-  cd $_srcname
-  make all -j$(nproc)
-  make -C tools/bpf/bpftool vmlinux.h feature-clang-bpf-co-re=1
-  # make htmldocs
+    cd $_srcname
+
+    if [[ $_make_module -eq 1 ]]; then
+        # Build only the via module
+        make -j$(nproc) M=drivers/gpu/drm/via modules
+    else
+        # Full kernel build (first time or when _make_module=0)
+        make -j$(nproc) all
+        make -C tools/bpf/bpftool vmlinux.h feature-clang-bpf-co-re=1
+        # make htmldocs # Removed as you commented it out
+    fi
 }
 
 _package() {
-  pkgdesc="The $pkgdesc kernel and modules"
-  depends=(
-    coreutils
-    initramfs
-    kmod
-  )
-  optdepends=(
-    'linux-firmware: firmware images needed for some devices'
-    'scx-scheds: to use sched-ext schedulers'
-    'wireless-regdb: to set the correct wireless channels of your country'
-  )
-  provides=(
-    KSMBD-MODULE
-    VIRTUALBOX-GUEST-MODULES
-    WIREGUARD-MODULE
-  )
-  replaces=(
-    virtualbox-guest-modules-arch
-    wireguard-arch
-  )
+    pkgdesc="The $pkgdesc kernel and modules"
+    depends=(
+        coreutils
+        initramfs
+        kmod
+    )
+    optdepends=(
+        'linux-firmware: firmware images needed for some devices'
+        'scx-scheds: to use sched-ext schedulers'
+        'wireless-regdb: to set the correct wireless channels of your country'
+    )
+    provides=(
+        KSMBD-MODULE
+        VIRTUALBOX-GUEST-MODULES
+        WIREGUARD-MODULE
+    )
+    replaces=(
+        virtualbox-guest-modules-arch
+        wireguard-arch
+    )
 
-  cd $_srcname
-  local modulesdir="$pkgdir/usr/lib/modules/$(<version)"
+    cd $_srcname
+    local modulesdir="$pkgdir/usr/lib/modules/$(<version)"
 
-  echo "Installing boot image..."
-  # systemd expects to find the kernel here to allow hibernation
-  # https://github.com/systemd/systemd/commit/edda44605f06a41fb86b7ab8128dcf99161d2344
-  install -Dm644 "$(make -s image_name)" "$modulesdir/vmlinuz"
+    echo "Installing boot image..."
+    # systemd expects to find the kernel here to allow hibernation
+    # https://github.com/systemd/systemd/commit/edda44605f06a41fb86b7ab8128dcf99161d2344
+    install -Dm644 "$(make -s image_name)" "$modulesdir/vmlinuz"
 
-  # Used by mkinitcpio to name the kernel
-  echo "$pkgbase" | install -Dm644 /dev/stdin "$modulesdir/pkgbase"
+    # Used by mkinitcpio to name the kernel
+    echo "$pkgbase" | install -Dm644 /dev/stdin "$modulesdir/pkgbase"
 
-  echo "Installing modules..."
-  ZSTD_CLEVEL=19 make INSTALL_MOD_PATH="$pkgdir/usr" INSTALL_MOD_STRIP=1 \
-    DEPMOD=/doesnt/exist modules_install  # Suppress depmod
+    echo "Installing modules..."
+    if [[ $_make_module -eq 1 ]]; then
+        # Install only the via module and its dependencies.
+        make INSTALL_MOD_PATH="$pkgdir/usr" INSTALL_MOD_STRIP=1 \
+             modules_install M=drivers/gpu/drm/via
+    else
+        # Install all modules (initial build).  Run depmod.
+        ZSTD_CLEVEL=19 make INSTALL_MOD_PATH="$pkgdir/usr" INSTALL_MOD_STRIP=1 \
+            modules_install
 
-  # remove build link
-  rm "$modulesdir"/build
-
-
-  echo
-  echo
-  echo
-  echo "INFO:"
-  echo "PLEASE ADD "via.modprobe=1" for via drm support in your Cmdline, and for Laptop Panel "vga=0x03b8" and "gfxpayload=1280x800-32" (with your own Panel resolution and depth), for TTY support to your GRUB cmdline!!"
-  echo 
-  echo
-  echo
+        # remove build link.  This is *only* safe to do on the first
+        # full build, because after that, the 'build' symlink is
+        # needed for the headers package.
+        rm "$modulesdir"/build
+    fi
+    echo
+    echo
+    echo
+    echo "INFO:"
+    echo "Please add \"via.modprobe=1\" for via kms support to your GRUB Cmdline."
+    echo
+    echo
+    echo
 }
 
 _package-headers() {
-  pkgdesc="Headers and scripts for building modules for the $pkgdesc kernel"
-  depends=(pahole)
+    pkgdesc="Headers and scripts for building modules for the $pkgdesc kernel"
+    depends=(pahole)
 
-  cd $_srcname
-  local builddir="$pkgdir/usr/lib/modules/$(<version)/build"
+    cd $_srcname
+    local builddir="$pkgdir/usr/lib/modules/$(<version)/build"
 
-  echo "Installing build files..."
-  install -Dt "$builddir" -m644 .config Makefile Module.symvers System.map \
-    localversion.* version vmlinux tools/bpf/bpftool/vmlinux.h
-  install -Dt "$builddir/kernel" -m644 kernel/Makefile
-  install -Dt "$builddir/arch/x86" -m644 arch/x86/Makefile
-  cp -t "$builddir" -a scripts
-  ln -srt "$builddir" "$builddir/scripts/gdb/vmlinux-gdb.py"
+    echo "Installing build files..."
+    install -Dt "$builddir" -m644 .config Makefile Module.symvers System.map \
+      localversion.* version vmlinux tools/bpf/bpftool/vmlinux.h
+    install -Dt "$builddir/kernel" -m644 kernel/Makefile
+    install -Dt "$builddir/arch/x86" -m644 arch/x86/Makefile
+    cp -t "$builddir" -a scripts
+    ln -srt "$builddir" "$builddir/scripts/gdb/vmlinux-gdb.py"
 
-  # required when STACK_VALIDATION is enabled
-  install -Dt "$builddir/tools/objtool" tools/objtool/objtool
+    # required when STACK_VALIDATION is enabled
+    install -Dt "$builddir/tools/objtool" tools/objtool/objtool
 
-  # required when DEBUG_INFO_BTF_MODULES is enabled
-  install -Dt "$builddir/tools/bpf/resolve_btfids" tools/bpf/resolve_btfids/resolve_btfids
+    # required when DEBUG_INFO_BTF_MODULES is enabled
+    install -Dt "$builddir/tools/bpf/resolve_btfids" tools/bpf/resolve_btfids/resolve_btfids
 
-  echo "Installing headers..."
-  cp -t "$builddir" -a include
-  cp -t "$builddir/arch/x86" -a arch/x86/include
-  install -Dt "$builddir/arch/x86/kernel" -m644 arch/x86/kernel/asm-offsets.s
+    echo "Installing headers..."
+    cp -t "$builddir" -a include
+    cp -t "$builddir/arch/x86" -a arch/x86/include
+    install -Dt "$builddir/arch/x86/kernel" -m644 arch/x86/kernel/asm-offsets.s
 
-  install -Dt "$builddir/drivers/md" -m644 drivers/md/*.h
-  install -Dt "$builddir/net/mac80211" -m644 net/mac80211/*.h
+    install -Dt "$builddir/drivers/md" -m644 drivers/md/*.h
+    install -Dt "$builddir/net/mac80211" -m644 net/mac80211/*.h
 
-  # https://bugs.archlinux.org/task/13146
-  install -Dt "$builddir/drivers/media/i2c" -m644 drivers/media/i2c/msp3400-driver.h
+    # https://bugs.archlinux.org/task/13146
+    install -Dt "$builddir/drivers/media/i2c" -m644 drivers/media/i2c/msp3400-driver.h
 
-  # https://bugs.archlinux.org/task/20402
-  install -Dt "$builddir/drivers/media/usb/dvb-usb" -m644 drivers/media/usb/dvb-usb/*.h
-  install -Dt "$builddir/drivers/media/dvb-frontends" -m644 drivers/media/dvb-frontends/*.h
-  install -Dt "$builddir/drivers/media/tuners" -m644 drivers/media/tuners/*.h
+    # https://bugs.archlinux.org/task/20402
+    install -Dt "$builddir/drivers/media/usb/dvb-usb" -m644 drivers/media/usb/dvb-usb/*.h
+    install -Dt "$builddir/drivers/media/dvb-frontends" -m644 drivers/media/dvb-frontends/*.h
+    install -Dt "$builddir/drivers/media/tuners" -m644 drivers/media/tuners/*.h
 
-  # https://bugs.archlinux.org/task/71392
-  install -Dt "$builddir/drivers/iio/common/hid-sensors" -m644 drivers/iio/common/hid-sensors/*.h
+    # https://bugs.archlinux.org/task/71392
+    install -Dt "$builddir/drivers/iio/common/hid-sensors" -m644 drivers/iio/common/hid-sensors/*.h
 
-  echo "Installing KConfig files..."
-  find . -name 'Kconfig*' -exec install -Dm644 {} "$builddir/{}" \;
+    echo "Installing KConfig files..."
+    find . -name 'Kconfig*' -exec install -Dm644 {} "$builddir/{}" \;
 
-  echo "Removing unneeded architectures..."
-  local arch
-  for arch in "$builddir"/arch/*/; do
-    [[ $arch = */x86/ ]] && continue
-    echo "Removing $(basename "$arch")"
-    rm -r "$arch"
-  done
+    echo "Removing unneeded architectures..."
+    local arch
+    for arch in "$builddir"/arch/*/; do
+        [[ $arch = */x86/ ]] && continue
+        echo "Removing $(basename "$arch")"
+        rm -r "$arch"
+    done
 
-  echo "Removing documentation..."
-  rm -rf "$builddir/Documentation"
+    echo "Removing documentation..."
+    rm -rf "$builddir/Documentation"
 
-  echo "Removing broken symlinks..."
-  find -L "$builddir" -type l -printf 'Removing %P\n' -delete
+    echo "Removing broken symlinks..."
+    find -L "$builddir" -type l -printf 'Removing %P\n' -delete
 
-  echo "Removing loose objects..."
-  find "$builddir" -type f -name '*.o' -printf 'Removing %P\n' -delete
+    echo "Removing loose objects..."
+    find "$builddir" -type f -name '*.o' -printf 'Removing %P\n' -delete
 
-  echo "Stripping build tools..."
-  local file
-  while read -rd '' file; do
-    case "$(file -Sib "$file")" in
-      application/x-sharedlib\;*)      # Libraries (.so)
-        strip -v $STRIP_SHARED "$file" ;;
-      application/x-archive\;*)        # Libraries (.a)
-        strip -v $STRIP_STATIC "$file" ;;
-      application/x-executable\;*)     # Binaries
-        strip -v $STRIP_BINARIES "$file" ;;
-      application/x-pie-executable\;*) # Relocatable binaries
-        strip -v $STRIP_SHARED "$file" ;;
-    esac
-  done < <(find "$builddir" -type f -perm -u+x ! -name vmlinux -print0)
+    echo "Stripping build tools..."
+    local file
+    while read -rd '' file; do
+        case "$(file -Sib "$file")" in
+        application/x-sharedlib\;*)      # Libraries (.so)
+            strip -v $STRIP_SHARED "$file" ;;
+        application/x-archive\;*)        # Libraries (.a)
+            strip -v $STRIP_STATIC "$file" ;;
+        application/x-executable\;*)     # Binaries
+            strip -v $STRIP_BINARIES "$file" ;;
+        application/x-pie-executable\;*) # Relocatable binaries
+            strip -v $STRIP_SHARED "$file" ;;
+        esac
+    done < <(find "$builddir" -type f -perm -u+x ! -name vmlinux -print0)
 
-  echo "Stripping vmlinux..."
-  strip -v $STRIP_STATIC "$builddir/vmlinux"
+    echo "Stripping vmlinux..."
+    strip -v $STRIP_STATIC "$builddir/vmlinux"
 
-  echo "Adding symlink..."
-  mkdir -p "$pkgdir/usr/src"
-  ln -sr "$builddir" "$pkgdir/usr/src/$pkgbase"
+    echo "Adding symlink..."
+    mkdir -p "$pkgdir/usr/src"
+    ln -sr "$builddir" "$pkgdir/usr/src/$pkgbase"
 }
 
 

@@ -142,6 +142,16 @@ _package() {
 
   # remove build link
   rm "$modulesdir"/build
+
+
+  echo
+  echo
+  echo
+  echo "INFO:"
+  echo "PLEASE ADD "via.modprobe=1" for via drm support in your Cmdline, and for Laptop Panel "vga=0x03b8" and "gfxpayload=1280x800-32" (with your own Panel resolution and depth), for TTY support to your GRUB cmdline!!"
+  echo 
+  echo
+  echo
 }
 
 _package-headers() {

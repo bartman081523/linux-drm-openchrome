@@ -64,10 +64,18 @@ export KBUILD_BUILD_TIMESTAMP="$(date -Ru${SOURCE_DATE_EPOCH:+d @$SOURCE_DATE_EP
 # Add _menuconfig variable
 _menuconfig=0  # Set to 1 to enable menuconfig
 _make_module=0 # Set to 1 to enable module only build after initial build
+_unstable=0    # Set to 1 to enable building of via unstable patch
 
 prepare() {
-    # Always copy the source, in case of full or partial build.
-    cp ../via_i2c.c $_srcname/drivers/gpu/drm/via/
+
+    echo "Copying from stable patch"
+    cp ../via/via_drm_patch_stable/* $_srcname/drivers/gpu/drm/via/
+
+    if [[ $_unstable -eq 1 ]]; then
+      echo "Copying from unstable patch"
+      cp ../via/via_drm_patch_unstable/* $_srcname/drivers/gpu/drm/via/
+    fi
+
     cd $_srcname
 
     echo "Setting version..."
@@ -165,7 +173,7 @@ _package() {
     echo
     echo
     echo "INFO:"
-    echo "Please add \"via.modprobe=1\" for via kms support to your GRUB Cmdline."
+    echo "PLEASE ADD \"via.modprobe=1\" for via drm support in your Cmdline, and for Laptop Panel \"vga=0x03b8\" and \"gfxpayload=1280x800-32\" (with your own Panel resolution and depth), for TTY support to your GRUB cmdline!!"
     echo
     echo
     echo

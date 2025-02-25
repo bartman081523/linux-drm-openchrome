@@ -61,10 +61,9 @@ export KBUILD_BUILD_HOST=archlinux
 export KBUILD_BUILD_USER=$pkgbase
 export KBUILD_BUILD_TIMESTAMP="$(date -Ru${SOURCE_DATE_EPOCH:+d @$SOURCE_DATE_EPOCH})"
 
-# Add _menuconfig variable
-_menuconfig=0  # Set to 1 to enable menuconfig
+#_menuconfig=0  # Set to 1 to enable menuconfig
 _make_module=0 # Set to 1 to enable module only build after initial build
-_unstable=0    # Set to 1 to enable building of via unstable patch
+#_unstable=0    # Set to 1 to enable building of via unstable patch
 
 prepare() {
 
@@ -173,7 +172,7 @@ _package() {
     echo
     echo
     echo "INFO:"
-    echo "PLEASE ADD \"via.modprobe=1\" for via drm support in your Cmdline, and for Laptop Panel \"vga=0x03b8\" and \"gfxpayload=1280x800-32\" (with your own Panel resolution and depth), for TTY support to your GRUB cmdline!!"
+    echo "PLEASE ADD \"via.modprobe=1\" for via drm and TTY support to your GRUB cmdline!!"
     echo
     echo
     echo

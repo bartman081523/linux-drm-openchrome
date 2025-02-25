@@ -262,6 +262,20 @@ _package-headers() {
 }
 
 
+
+#if [[ $_unstable -eq 1 ]]; then
+#    pkgname=(
+#      "${_product}-unstable-git"
+#      "${_product}-headers-unstable-git"
+#    )
+#else
+#    pkgname=(
+#      "${_product}-git"
+#      "${_product}-headers-git"
+#    )
+#fi
+
+
 pkgname=(
   "${_product}-git"
   "${_product}-headers-git"

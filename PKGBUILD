@@ -62,7 +62,7 @@ export KBUILD_BUILD_USER=$pkgbase
 export KBUILD_BUILD_TIMESTAMP="$(date -Ru${SOURCE_DATE_EPOCH:+d @$SOURCE_DATE_EPOCH})"
 
 #_menuconfig=0  # Set to 1 to enable menuconfig
-_make_module=0 # Set to 1 to enable module only build after initial build
+#_make_module=0 # Set to 1 to enable module only build after initial build
 #_unstable=0    # Set to 1 to enable building of via unstable patch
 
 prepare() {

@@ -1,2 +1,4 @@
 linux-drm-openchrome-git-6.8.r1253665.ac5e7e1ca4d4-1-x86_64.pkg.tar.zst filter=lfs diff=lfs merge=lfs -text
 linux-drm-openchrome-headers-git-6.8.r1253665.ac5e7e1ca4d4-1-x86_64.pkg.tar.zst filter=lfs diff=lfs merge=lfs -text
+linux69-drm-openchrome/linux-drm-openchrome-git-6.8.r1253665.ac5e7e1ca4d4-1-x86_64.pkg.tar.zst filter=lfs diff=lfs merge=lfs -text
+linux69-drm-openchrome/linux-drm-openchrome-headers-git-6.8.r1253665.ac5e7e1ca4d4-1-x86_64.pkg.tar.zst filter=lfs diff=lfs merge=lfs -text

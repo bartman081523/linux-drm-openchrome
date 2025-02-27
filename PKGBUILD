@@ -62,17 +62,16 @@ export KBUILD_BUILD_USER=$pkgbase
 export KBUILD_BUILD_TIMESTAMP="$(date -Ru${SOURCE_DATE_EPOCH:+d @$SOURCE_DATE_EPOCH})"
 
 #_menuconfig=0  # Set to 1 to enable menuconfig
-#_make_module=0 # Set to 1 to enable module only build after initial build
 #_unstable=0    # Set to 1 to enable building of via unstable patch
 
 prepare() {
 
-    echo "Copying from stable patch"
-    cp ../via/via_drm_patch_stable/* $_srcname/drivers/gpu/drm/via/
-
     if [[ $_unstable -eq 1 ]]; then
       echo "Copying from unstable patch"
       cp ../via/via_drm_patch_unstable/* $_srcname/drivers/gpu/drm/via/
+    else
+      echo "Copying from stable patch"
+      cp ../via/via_drm_patch_stable/* $_srcname/drivers/gpu/drm/via/
     fi
 
     cd $_srcname
@@ -109,15 +108,10 @@ prepare() {
 build() {
     cd $_srcname
 
-    if [[ $_make_module -eq 1 ]]; then
-        # Build only the via module
-        make -j$(nproc) M=drivers/gpu/drm/via modules
-    else
-        # Full kernel build (first time or when _make_module=0)
-        make -j$(nproc) all
-        make -C tools/bpf/bpftool vmlinux.h feature-clang-bpf-co-re=1
-        # make htmldocs # Removed as you commented it out
-    fi
+    # Full kernel build (first time or when _make_module=0)
+    make -j$(nproc) all
+    make -C tools/bpf/bpftool vmlinux.h feature-clang-bpf-co-re=1
+    # make htmldocs # Removed as you commented it out
 }
 
 _package() {
@@ -154,20 +148,14 @@ _package() {
     echo "$pkgbase" | install -Dm644 /dev/stdin "$modulesdir/pkgbase"
 
     echo "Installing modules..."
-    if [[ $_make_module -eq 1 ]]; then
-        # Install only the via module and its dependencies.
-        make INSTALL_MOD_PATH="$pkgdir/usr" INSTALL_MOD_STRIP=1 \
-             modules_install M=drivers/gpu/drm/via
-    else
-        # Install all modules (initial build).  Run depmod.
-        ZSTD_CLEVEL=19 make INSTALL_MOD_PATH="$pkgdir/usr" INSTALL_MOD_STRIP=1 \
-            modules_install
+    # Install all modules (initial build).  Run depmod.
+    ZSTD_CLEVEL=19 make INSTALL_MOD_PATH="$pkgdir/usr" INSTALL_MOD_STRIP=1 \
+        modules_install
 
-        # remove build link.  This is *only* safe to do on the first
-        # full build, because after that, the 'build' symlink is
-        # needed for the headers package.
-        rm "$modulesdir"/build
-    fi
+    # remove build link.  This is *only* safe to do on the first
+    # full build, because after that, the 'build' symlink is
+    # needed for the headers package.
+    rm "$modulesdir"/build
     echo
     echo
     echo

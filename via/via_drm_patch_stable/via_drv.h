@@ -407,4 +407,4 @@ void via_lvds_probe(struct drm_device *dev);
 void via_lvds_init(struct drm_device *dev);
 void via_hdmi_init(struct drm_device *dev, u32 di_port);
 
-#endif /* _VIA_DRV_H */
+#endif /* _VIA_DRV_H_ */

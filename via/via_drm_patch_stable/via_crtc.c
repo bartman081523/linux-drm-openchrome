@@ -42,6 +42,7 @@
 #include <drm/drm_mode.h>
 #include <drm/drm_modeset_helper_vtables.h>
 #include <drm/drm_plane.h>
+#include <drm/drm_print.h>
 
 #include <drm/ttm/ttm_bo.h>
 
@@ -365,6 +366,8 @@ static void via_load_vpit_regs(struct via_drm_priv *dev_priv)
 	unsigned int i = 0;
 	u8 reg_value = 0;
 
+    drm_dbg_kms(&dev_priv->dev, "Entered %s.\n", __func__);
+
 	/* Enable changing the palette registers */
 	reg_value = vga_r(VGABASE, VGA_IS1_RC);
 	vga_w(VGABASE, VGA_ATT_W, 0x00);
@@ -387,6 +390,8 @@ static void via_load_vpit_regs(struct via_drm_priv *dev_priv)
 	/* Disable changing the palette registers */
 	reg_value = vga_r(VGABASE, VGA_IS1_RC);
 	vga_w(VGABASE, VGA_ATT_W, BIT(5));
+
+    drm_dbg_kms(&dev_priv->dev, "Exiting %s.\n", __func__);
 }
 
 static int via_iga1_display_fifo_regs(struct drm_device *dev,
@@ -1050,7 +1055,7 @@ static int via_iga2_display_fifo_regs(struct drm_device *dev,
 		/* CR95[2:0], CR92[3:0] */
 		fifo_high_threshold = VX900_IGA2_FIFO_HIGH_THRESHOLD;
 
-		/* CR94[6:0] */
+        /* CR94[6:0] */
 		display_queue_expire_num = VX900_IGA2_DISPLAY_QUEUE_EXPIRE_NUM;
 		break;
 	default:
@@ -1113,6 +1118,8 @@ void via_load_crtc_pixel_timing(struct drm_crtc *crtc,
 	struct via_crtc *iga = container_of(crtc, struct via_crtc, base);
 	struct via_drm_priv *dev_priv = to_via_drm_priv(dev);
 	u32 reg_value = 0;
+
+    drm_dbg_kms(dev, "Entered %s.\n", __func__);
 
 	reg_value = IGA1_PIXELTIMING_HOR_TOTAL_FORMULA(mode->crtc_htotal);
 	load_value_to_registers(VGABASE, &iga->pixel_timings.htotal,
@@ -1179,6 +1186,7 @@ void via_load_crtc_pixel_timing(struct drm_crtc *crtc,
 
 	}
 	svga_wcrt_mask(VGABASE, 0xFD, BIT(5), BIT(5));
+    drm_dbg_kms(dev, "Exiting %s.\n", __func__);
 }
 
 /* Load CRTC timing registers */
@@ -1188,6 +1196,8 @@ static void via_load_crtc_timing(struct via_crtc *iga, struct drm_display_mode *
 	struct pci_dev *pdev = to_pci_dev(dev->dev);
 	struct via_drm_priv *dev_priv = to_via_drm_priv(dev);
 	u32 reg_value = 0;
+
+    drm_dbg_kms(dev, "Entered %s.\n", __func__);
 
 	if (!iga->index) {
 		if (pdev->device == PCI_DEVICE_ID_VIA_CHROME9_HD) {
@@ -1270,6 +1280,7 @@ static void via_load_crtc_timing(struct via_crtc *iga, struct drm_display_mode *
 		reg_value = IGA2_VER_SYNC_END_FORMULA(mode->crtc_vsync_end);
 		load_value_to_registers(VGABASE, &iga->timings.vsync_end, reg_value);
 	}
+    drm_dbg_kms(dev, "Exiting %s.\n", __func__);
 }
 
 /*
@@ -1285,6 +1296,8 @@ static void via_set_scale_path(struct drm_crtc *crtc, u32 scale_type)
 	struct pci_dev *pdev = to_pci_dev(dev->dev);
 	struct via_drm_priv *dev_priv = to_via_drm_priv(dev);
 	u8 reg_cr_fd = vga_rcrt(VGABASE, 0xFD);
+
+    drm_dbg_kms(dev, "Entered %s.\n", __func__);
 
 	if (!iga->index)
 		/* register reuse: select IGA1 path */
@@ -1320,6 +1333,7 @@ static void via_set_scale_path(struct drm_crtc *crtc, u32 scale_type)
 		break;
 	}
 	vga_wcrt(VGABASE, 0xFD, reg_cr_fd);
+    drm_dbg_kms(dev, "Exiting %s.\n", __func__);
 }
 
 /* disable IGA scaling */
@@ -1328,6 +1342,8 @@ static void via_disable_iga_scaling(struct drm_crtc *crtc)
 	struct via_crtc *iga = container_of(crtc, struct via_crtc, base);
 	struct drm_device *dev = crtc->dev;
 	struct via_drm_priv *dev_priv = to_via_drm_priv(dev);
+
+    drm_dbg_kms(dev, "Entered %s.\n", __func__);
 
 	if (iga->index) {
 		/* IGA2 scalings disable */
@@ -1358,6 +1374,7 @@ static void via_disable_iga_scaling(struct drm_crtc *crtc)
 		/* Horizontal and Vertical scaling disable */
 		svga_wcrt_mask(VGABASE, 0xA2, 0x00, BIT(7) | BIT(3));
 	}
+    drm_dbg_kms(dev, "Exiting %s.\n", __func__);
 }
 
 /*
@@ -1374,6 +1391,8 @@ static bool via_set_iga_scale_function(struct drm_crtc *crtc, u32 scale_type)
 	struct via_crtc *iga = container_of(crtc, struct via_crtc, base);
 	struct drm_device *dev = crtc->dev;
 	struct via_drm_priv *dev_priv = to_via_drm_priv(dev);
+
+    drm_dbg_kms(dev, "Entered %s.\n", __func__);
 
 	if (!(scale_type & (VIA_SHRINK + VIA_EXPAND)))
 		return false;
@@ -1448,6 +1467,8 @@ static bool via_set_iga_scale_function(struct drm_crtc *crtc, u32 scale_type)
 			svga_wcrt_mask(VGABASE, 0x79, BIT(2), BIT(2));
 		}
 	}
+
+    drm_dbg_kms(dev, "Exiting %s.\n", __func__);
 	return true;
 }
 
@@ -1467,6 +1488,9 @@ static bool via_load_iga_scale_factor_regs(struct via_drm_priv *dev_priv,
 	u32 src_ver_regs = mode->crtc_vdisplay;
 	u32 hor_factor = 0, ver_factor = 0;
 	struct vga_registers reg;
+    struct drm_device *dev = &dev_priv->dev;
+
+    drm_dbg_kms(dev, "Entered %s.\n", __func__);
 
 	if ((0 == src_hor_regs) || (0 == src_ver_regs) || (0 == dst_hor_regs)
 			|| (0 == dst_ver_regs))
@@ -1527,6 +1551,7 @@ static bool via_load_iga_scale_factor_regs(struct via_drm_priv *dev_priv,
 		else
 			svga_wcrt_mask(VGABASE, 0xA2, 0, BIT(3));
 	}
+    drm_dbg_kms(dev, "Exiting %s.\n", __func__);
 	return true;
 }
 
@@ -1539,6 +1564,9 @@ static void via_set_iga2_downscale_source_timing(struct drm_crtc *crtc,
 	unsigned int srcx = mode->crtc_hdisplay, srcy = mode->crtc_vdisplay;
 	struct via_crtc *iga = container_of(crtc, struct via_crtc, base);
 	struct drm_display_mode *src_timing;
+    struct drm_device *dev = crtc->dev;
+
+    drm_dbg_kms(dev, "Entered %s.\n", __func__);
 
 	src_timing = drm_mode_duplicate(crtc->dev, adjusted_mode);
 	/* derived source timing */
@@ -1578,6 +1606,7 @@ static void via_set_iga2_downscale_source_timing(struct drm_crtc *crtc,
 
 	/* Cleanup up source timings */
 	drm_mode_destroy(crtc->dev, src_timing);
+    drm_dbg_kms(dev, "Exiting %s.\n", __func__);
 }
 
 static void via_mode_set_nofb(struct drm_crtc *crtc)
@@ -2046,6 +2075,8 @@ static void via_crtc_param_init(struct via_drm_priv *dev_priv,
 	struct via_crtc *iga = container_of(crtc,
 						struct via_crtc, base);
 
+    drm_dbg_kms(dev, "Entered %s.\n", __func__);
+
 	if (iga->index) {
 		iga->timings.htotal.count = ARRAY_SIZE(iga2_hor_total);
 		iga->timings.htotal.regs = iga2_hor_total;
@@ -2195,6 +2226,7 @@ static void via_crtc_param_init(struct via_drm_priv *dev_priv,
 		iga->offset.count = ARRAY_SIZE(iga1_offset);
 		iga->offset.regs = iga1_offset;
 	}
+    drm_dbg_kms(dev, "Exiting %s.\n", __func__);
 }
 
 static int via_gamma_init(struct drm_crtc *crtc)
@@ -2238,6 +2270,8 @@ int via_crtc_init(struct via_drm_priv *dev_priv, uint32_t index)
 	struct drm_plane *cursor;
 	uint32_t possible_crtcs;
 	int ret;
+
+    drm_dbg_kms(dev, "Entered %s.\n", __func__);
 
 	possible_crtcs = 1 << index;
 
@@ -2319,5 +2353,6 @@ cleanup_primary:
 free_primary:
 	kfree(primary);
 exit:
+    drm_dbg_kms(dev, "Exiting %s.\n", __func__);
 	return ret;
 }

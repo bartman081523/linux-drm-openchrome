@@ -386,3 +386,14 @@ MODULE_ALIAS(DRIVER_NAME);
 MODULE_SOFTDEP("pre: ttm");
 MODULE_SOFTDEP("pre: drm_kms_helper");
 MODULE_SOFTDEP("pre: drm");
+
+/* 
+ * These functions are defined in via_init.c
+ * Only declare them here, don't implement them
+ */
+extern int via_device_init(struct drm_device *dev);
+extern int via_drm_init(struct drm_device *dev, unsigned long flags);
+extern void via_device_fini(struct drm_device *dev);
+extern void via_drm_fini(struct drm_device *dev);
+
+/* Remove any implementations of these functions from this file */

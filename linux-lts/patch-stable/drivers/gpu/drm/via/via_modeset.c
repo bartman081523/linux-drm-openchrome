@@ -111,14 +111,6 @@ int via_modeset_init_safe(struct drm_device *dev)
         return ret;
     }
 
-    /* I2C bus initialization needs to come before any output probe */
-    via_i2c_reg_init(dev_priv);
-    ret = via_i2c_init(dev);
-    if (ret) {
-        drm_err(dev, "Failed to initialize I2C: %d\n", ret);
-        goto exit;
-    }
-
     /* Initialize CRTCs with timeout protection */
     for (i = 0; i < VIA_MAX_CRTC; i++) {
         ret = via_hw_init_with_timeout(dev, 
@@ -245,8 +237,7 @@ error_alloc:
     /* Clean up allocated encoders/connectors here */
 error_crtc_init:
     via_i2c_exit();
-exit:
-    return ret;
+    return ret;  /* Return directly instead of using the exit label */
 }
 
 /* This function provides a safe way to shutdown modeset if needed */

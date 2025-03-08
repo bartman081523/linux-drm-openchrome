@@ -80,7 +80,7 @@ KSYMTAB_FUNC(drm_gem_ttm_mmap, "_gpl", "");
 KSYMTAB_FUNC(drm_gem_ttm_vmap, "_gpl", "");
 KSYMTAB_FUNC(drm_gem_ttm_vunmap, "_gpl", "");
 
-MODULE_INFO(depends, "ttm,i2c-algo-bit");
+MODULE_INFO(depends, "ttm");
 
 MODULE_ALIAS("pci:v00001106d00003122sv*sd*bc*sc*i*");
 MODULE_ALIAS("pci:v00001106d00007205sv*sd*bc*sc*i*");
@@ -95,4 +95,4 @@ MODULE_ALIAS("pci:v00001106d00001122sv*sd*bc*sc*i*");
 MODULE_ALIAS("pci:v00001106d00005122sv*sd*bc*sc*i*");
 MODULE_ALIAS("pci:v00001106d00007122sv*sd*bc*sc*i*");
 
-MODULE_INFO(srcversion, "033B8981986880E576F9B72");
+MODULE_INFO(srcversion, "29A4C679C02C99E4AF9AE87");

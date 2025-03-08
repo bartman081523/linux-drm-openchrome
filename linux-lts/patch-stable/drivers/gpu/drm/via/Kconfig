@@ -1,0 +1,10 @@
+config DRM_VIA
+	tristate "OpenChrome (VIA Technologies Chrome)"
+	depends on DRM && PCI && X86
+	select DRM_KMS_HELPER # Ensure KMS helper is selected
+	select DRM_GEM_SHMEM_HELPER
+	select DRM_TTM
+	help
+	  Choose this option if you have VIA Technologies UniChrome or
+	  Chrome9 integrated graphics. If M is selected the module will
+	  be called via.
